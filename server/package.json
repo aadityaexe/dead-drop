@@ -4,8 +4,8 @@
   "description": "Zero-knowledge secret sharing backend",
   "main": "index.js",
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "node --watch api/index.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

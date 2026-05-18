@@ -4,10 +4,10 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 
-const securityHeaders = require('../middleware/securityHeaders');
-const rateLimiter = require('../middleware/rateLimiter');
-const dropRoutes = require('../routes/drops');
-const { getStats, initStats } = require('../utils/stats');
+const securityHeaders = require('./middleware/securityHeaders');
+const rateLimiter = require('./middleware/rateLimiter');
+const dropRoutes = require('./routes/drops');
+const { getStats, initStats } = require('./utils/stats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
