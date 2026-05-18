@@ -13,6 +13,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // ─── Middleware ────────────────────────────────────────────
+// Trust the Vercel proxy for express-rate-limit
+app.set('trust proxy', 1);
+
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -49,12 +52,12 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
 }
 
 // ─── Database Connection ────────────────────────────────────
-let isConnected = false;
 const connectDB = async () => {
-  if (isConnected) return;
+  if (mongoose.connection.readyState >= 1) return;
   try {
-    await mongoose.connect(process.env.MONGO_URI);
-    isConnected = true;
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) throw new Error('Missing MongoDB URI in environment variables');
+    await mongoose.connect(uri);
     console.log('✓ MongoDB connected');
     await initStats();
   } catch (err) {

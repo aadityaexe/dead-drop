@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { importKey, decryptMessage, deriveKeyFromPassword } from '../utils/crypto';
 
 export default function ReadDrop() {
   const { id } = useParams();
   const location = useLocation();
+  const fetchedRef = useRef(false);
   
   const [state, setState] = useState('loading'); // loading, password_prompt, decrypting, success, burned
   const [message, setMessage] = useState('');
@@ -19,6 +20,9 @@ export default function ReadDrop() {
 
   // 1. On mount, fetch the drop from the server (this burns it atomically!)
   useEffect(() => {
+    if (fetchedRef.current) return;
+    fetchedRef.current = true;
+
     let mounted = true;
     
     async function fetchDrop() {
