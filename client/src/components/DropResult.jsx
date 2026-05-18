@@ -18,7 +18,7 @@ export default function DropResult() {
   const { id, exportedKey, expiresAt, hasPassword } = state;
   
   // Construct the full URL
-  const clientUrl = import.meta.env.VITE_API_URL || window.location.origin;
+  const clientUrl = window.location.origin;
   const baseUrl = `${clientUrl}/drop/${id}`;
   const fullUrl = hasPassword ? baseUrl : `${baseUrl}#${exportedKey}`;
 
