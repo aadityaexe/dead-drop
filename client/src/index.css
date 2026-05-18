@@ -56,6 +56,48 @@ body {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  
+  /* Security Overrides */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+.security-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #000;
+  color: #fff;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+}
+
+.security-overlay h2 {
+  color: #ff3333;
+  margin-bottom: var(--space-2);
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+}
+
+@media print {
+  body {
+    display: none !important;
+  }
 }
 
 /* Typography Elements */
@@ -428,6 +470,36 @@ button.secondary:hover {
   opacity: 0.9;
 }
 
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  z-index: 1001;
+}
+
+.hamburger span {
+  display: block;
+  width: 25px;
+  height: 2px;
+  background-color: var(--text-color);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hamburger.active span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+.hamburger.active span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger.active span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
 /* Footer */
 .footer {
   margin-top: auto;
@@ -452,12 +524,42 @@ button.secondary:hover {
     padding: 0 var(--space-4);
   }
 
+  .hamburger {
+    display: flex;
+  }
+
   .nav-links {
-    gap: var(--space-3);
+    position: fixed;
+    top: 80px;
+    left: 0;
+    right: 0;
+    background: var(--bg-color);
+    flex-direction: column;
+    padding: var(--space-5) var(--space-4);
+    gap: var(--space-5);
+    border-bottom: var(--border-width) solid var(--text-color);
+    transform: translateY(-150%);
+    opacity: 0;
+    visibility: hidden;
+    transition: transform 0.4s ease, opacity 0.4s ease, visibility 0.4s;
+    z-index: 999;
+    box-shadow: 0 12px 48px var(--input-focus-bg);
+  }
+
+  .nav-links.open {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
   }
 
   .nav-link {
-    font-size: 0.75rem;
+    font-size: 1.125rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .theme-toggle {
+    margin: 0 auto;
   }
 
   .card {

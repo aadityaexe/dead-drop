@@ -135,7 +135,6 @@ export default function CreateDrop() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               disabled={isSubmitting}
-              autoFocus
             />
             <div className="character-count">{message.length} chars</div>
           </div>

@@ -18,7 +18,8 @@ export default function DropResult() {
   const { id, exportedKey, expiresAt, hasPassword } = state;
   
   // Construct the full URL
-  const baseUrl = `${window.location.origin}/drop/${id}`;
+  const clientUrl = import.meta.env.VITE_API_URL || window.location.origin;
+  const baseUrl = `${clientUrl}/drop/${id}`;
   const fullUrl = hasPassword ? baseUrl : `${baseUrl}#${exportedKey}`;
 
   useEffect(() => {
@@ -82,14 +83,20 @@ export default function DropResult() {
         />
       </div>
 
-      <div className="form-group mt-3" style={{ textAlign: 'center' }}>
+      <div className="form-group mt-3" style={{ textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
         <button className="cta" onClick={copyToClipboard} style={{ maxWidth: '200px' }}>
           {copied ? '✓ Copied' : 'Copy Link'}
         </button>
       </div>
 
       {qrSrc && (
-        <div className="mt-4" style={{ padding: 'var(--space-3)', border: 'var(--border-width) solid var(--text-color)', background: 'white' }}>
+        <div className="mt-4" style={{ 
+          padding: 'var(--space-3)', 
+          border: 'var(--border-width) solid var(--text-color)', 
+          background: 'white',
+          maxWidth: '250px',
+          margin: 'var(--space-4) auto 0'
+        }}>
           <img src={qrSrc} alt="QR Code" style={{ display: 'block', width: '100%' }} />
         </div>
       )}
