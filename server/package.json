@@ -1,0 +1,17 @@
+{
+  "name": "dead-drop-server",
+  "version": "1.0.0",
+  "description": "Zero-knowledge secret sharing backend",
+  "main": "index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "dev": "node --watch api/index.js",
+    "build": "echo 'No build required for server'"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "mongoose": "^8.9.5"
+  }
+}
