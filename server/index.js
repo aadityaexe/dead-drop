@@ -52,16 +52,30 @@ if (process.env.NODE_ENV === 'production' && !process.env.VERCEL) {
 }
 
 // ─── Database Connection ────────────────────────────────────
+let cachedConnection = null;
+
 const connectDB = async () => {
-  if (mongoose.connection.readyState >= 1) return;
+  if (cachedConnection) return cachedConnection;
+  if (mongoose.connection.readyState === 1) {
+    cachedConnection = mongoose;
+    return cachedConnection;
+  }
+  
   try {
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
     if (!uri) throw new Error('Missing MongoDB URI in environment variables');
-    await mongoose.connect(uri);
+    
+    mongoose.set('strictQuery', true);
+    cachedConnection = await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    
     console.log('✓ MongoDB connected');
     await initStats();
+    return cachedConnection;
   } catch (err) {
     console.error('✗ MongoDB connection failed:', err.message);
+    throw err;
   }
 };
 
