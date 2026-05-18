@@ -129,6 +129,15 @@ export default function CreateDrop() {
       {/* Main Content (Create Drop Form) */}
       <div className="container" >
         <form onSubmit={handleSubmit} className="card">
+          
+          <div style={{ marginBottom: 'var(--space-2)' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: 'var(--space-2)' }}>Encrypt Payload</h2>
+            <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: 0 }}>
+              Type or paste your sensitive data below. The content will be encrypted in your browser. 
+              We cannot see your data, and it will be destroyed automatically based on your settings.
+            </p>
+          </div>
+
           <div style={{ position: 'relative', width: '100%' }}>
             <textarea
               placeholder="Enter plaintext payload..."

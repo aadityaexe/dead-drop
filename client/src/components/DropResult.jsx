@@ -70,54 +70,93 @@ export default function DropResult() {
   };
 
   return (
-    <div className="card mt-5">
-      <h2>Payload Generated</h2>
-      
-      <div className="form-group mt-5">
-        <span className="label">Access Link</span>
-        <input 
-          type="text" 
-          value={fullUrl} 
-          readOnly 
-          onClick={selectAll}
-        />
-      </div>
-
-      <div className="form-group mt-3" style={{ textAlign: 'center', display: 'flex', justifyContent: 'center' }}>
-        <button className="cta" onClick={copyToClipboard} style={{ maxWidth: '200px' }}>
-          {copied ? '✓ Copied' : 'Copy Link'}
-        </button>
-      </div>
-
-      {qrSrc && (
-        <div className="mt-4" style={{ 
-          padding: 'var(--space-3)', 
-          border: 'var(--border-width) solid var(--text-color)', 
-          background: 'white',
-          maxWidth: '250px',
-          margin: 'var(--space-4) auto 0'
-        }}>
-          <img src={qrSrc} alt="QR Code" style={{ display: 'block', width: '100%' }} />
+    <div className="container">
+      <div className="card mt-5">
+        
+        <div style={{ marginBottom: 'var(--space-2)' }}>
+          <h2 className="glitch" data-text="Payload Generated" style={{ fontSize: '1.5rem', marginBottom: 'var(--space-2)' }}>
+            Payload Generated
+          </h2>
+          <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: 0 }}>
+            Your sensitive data has been encrypted and secured. Share the unique link or QR code below.
+            <br/><strong className="annihilated-text">Do not lose this link</strong>—it cannot be recovered.
+          </p>
         </div>
-      )}
+        
+        <div className="form-group mt-4">
+          <span className="label">Secure Access Link</span>
+          <div style={{ position: 'relative' }}>
+            <input 
+              type="text" 
+              value={fullUrl} 
+              readOnly 
+              onClick={selectAll}
+              style={{ paddingRight: '90px' }}
+            />
+            <button 
+              className="cta" 
+              onClick={copyToClipboard} 
+              style={{ 
+                position: 'absolute', 
+                right: '4px', 
+                top: '4px', 
+                bottom: '4px',
+                width: 'auto',
+                padding: '0 var(--space-3)',
+                boxShadow: 'none',
+                transform: 'none',
+                height: 'calc(100% - 8px)'
+              }}
+            >
+              {copied ? '✓' : 'Copy'}
+            </button>
+          </div>
+        </div>
 
-      <div className="label mt-4">
-        ⏱ Expires in {getTimeLeft()}
-      </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-5)', alignItems: 'flex-start', marginTop: 'var(--space-4)' }}>
+          {qrSrc && (
+            <div style={{ flex: '1', minWidth: '150px' }}>
+              <span className="label" style={{ marginBottom: 'var(--space-2)' }}>Scan Matrix</span>
+              <div style={{ 
+                padding: 'var(--space-2)', 
+                border: 'var(--border-width) solid var(--text-color)', 
+                background: 'white',
+                maxWidth: '180px',
+                boxShadow: '4px 4px 0 var(--text-color)'
+              }}>
+                <img src={qrSrc} alt="QR Code" style={{ display: 'block', width: '100%' }} />
+              </div>
+            </div>
+          )}
 
-      <div className="form-group mt-4" style={{ textAlign: 'center' }}>
-        <button className="secondary" onClick={checkStatus}>
-          Trace Payload
-        </button>
-        {status && <div className="label mt-3">{status}</div>}
-      </div>
+          <div style={{ flex: '2', minWidth: '200px', display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+            <div>
+              <span className="label" style={{ marginBottom: 'var(--space-2)' }}>Payload Status</span>
+              <div style={{ 
+                padding: 'var(--space-3)', 
+                border: 'var(--border-width) dashed var(--text-color)',
+                fontFamily: 'var(--font-mono)'
+              }}>
+                <div>⏱ Expires in: <strong>{getTimeLeft()}</strong></div>
+                <div className="mt-3">
+                  <button className="secondary" onClick={checkStatus} style={{ width: '100%' }}>
+                    Trace Payload
+                  </button>
+                </div>
+                {status && <div className="mt-3" style={{ fontWeight: 'bold' }}>{status}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
 
-      <div className="warning-banner mt-4">
-        ⚠ Once read, this payload is permanently destroyed.
-      </div>
-      
-      <div className="mt-5">
-        <Link to="/" className="label">← Encrypt New Payload</Link>
+        <div className="warning-banner mt-4" style={{ borderColor: '#ff3333', color: '#ff3333' }}>
+          ⚠ WARNING: Once read, this payload is permanently destroyed.
+        </div>
+        
+        <div className="mt-4" style={{ textAlign: 'center' }}>
+          <Link to="/" className="nav-link" style={{ fontSize: '0.875rem' }}>← Encrypt New Payload</Link>
+        </div>
+
       </div>
     </div>
   );

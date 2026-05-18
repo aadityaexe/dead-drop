@@ -133,6 +133,7 @@ a:hover {
 
 .page-content {
   padding-top: 80px; /* Navbar height */
+  padding-bottom: var(--space-8);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -142,10 +143,10 @@ a:hover {
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  padding: 0 var(--space-4);
+  padding: var(--space-6) var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 /* Navbar */
@@ -186,6 +187,25 @@ a:hover {
   font-size: 0.875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  position: relative;
+}
+
+.nav-link::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--text-color);
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.nav-link:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
 }
 
 /* Hero Section */
@@ -198,6 +218,34 @@ a:hover {
   justify-content: center;
   min-height: calc(100vh - 80px);
   gap: var(--space-4);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-badge {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--text-color);
+  display: inline-block;
+  margin-bottom: var(--space-2);
+  animation: pulse-border 2.5s infinite alternate;
+}
+
+@keyframes pulse-border {
+  0% { border-color: rgba(240, 227, 207, 0.2); }
+  100% { border-color: rgba(240, 227, 207, 1); }
+}
+
+[data-theme="light"] .hero-badge {
+  animation: pulse-border-light 2.5s infinite alternate;
+}
+
+@keyframes pulse-border-light {
+  0% { border-color: rgba(88, 89, 91, 0.2); }
+  100% { border-color: rgba(88, 89, 91, 1); }
 }
 
 .hero h1 {
@@ -206,11 +254,98 @@ a:hover {
   letter-spacing: -0.03em;
 }
 
-.hero p {
+/* Glitch Effect on Hover */
+.glitch {
+  position: relative;
+  cursor: default;
+}
+
+.glitch::before,
+.glitch::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-color);
+  opacity: 0;
+  z-index: -1;
+}
+
+.glitch:hover::before {
+  left: 3px;
+  text-shadow: -2px 0 #ff003c;
+  opacity: 1;
+  animation: glitch-anim 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
+.glitch:hover::after {
+  left: -3px;
+  text-shadow: -2px 0 #00e5ff;
+  opacity: 1;
+  animation: glitch-anim2 0.2s cubic-bezier(.25, .46, .45, .94) both infinite;
+}
+
+@keyframes glitch-anim {
+  0% { clip: rect(10px, 9999px, 44px, 0); }
+  20% { clip: rect(70px, 9999px, 80px, 0); }
+  40% { clip: rect(30px, 9999px, 50px, 0); }
+  60% { clip: rect(80px, 9999px, 90px, 0); }
+  80% { clip: rect(20px, 9999px, 40px, 0); }
+  100% { clip: rect(50px, 9999px, 70px, 0); }
+}
+
+@keyframes glitch-anim2 {
+  0% { clip: rect(60px, 9999px, 90px, 0); }
+  20% { clip: rect(20px, 9999px, 40px, 0); }
+  40% { clip: rect(80px, 9999px, 100px, 0); }
+  60% { clip: rect(10px, 9999px, 30px, 0); }
+  80% { clip: rect(40px, 9999px, 60px, 0); }
+  100% { clip: rect(90px, 9999px, 110px, 0); }
+}
+
+.hero-subtitle {
   font-size: 1.125rem;
   max-width: 600px;
   opacity: 0.9;
   margin-bottom: 0;
+  line-height: 1.6;
+}
+
+.annihilated-text {
+  font-weight: 800;
+  border-bottom: 2px solid #ff3333;
+  color: inherit;
+}
+
+.hero-scroll-indicator {
+  margin-top: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.3s ease;
+}
+
+.hero-scroll-indicator:hover {
+  opacity: 1;
+}
+
+.arrow-down {
+  font-size: 1.5rem;
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(10px); }
+  60% { transform: translateY(5px); }
 }
 
 /* Components */
@@ -222,7 +357,21 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  box-shadow: 0 12px 48px var(--input-focus-bg);
+  box-shadow: 12px 12px 0 var(--text-color);
+  position: relative;
+}
+
+.card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.05) 50%);
+  background-size: 100% 4px;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .label {
@@ -246,10 +395,15 @@ textarea, input[type="text"], input[type="password"] {
   font-size: 1rem;
   outline: none;
   border-radius: 0;
+  transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
 }
 
 textarea:focus, input:focus {
   background: var(--input-focus-bg);
+  box-shadow: 4px 4px 0 var(--text-color);
+  transform: translate(-2px, -2px);
 }
 
 textarea::placeholder, input::placeholder {
@@ -308,17 +462,30 @@ button.cta {
   text-transform: uppercase;
   width: 100%;
   border-radius: 0;
+  box-shadow: 6px 6px 0 var(--text-color);
+  transition: all 0.1s ease;
+  position: relative;
+  z-index: 1;
 }
 
 button.cta:hover {
   background: var(--bg-color);
   color: var(--text-color);
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--text-color);
+}
+
+button.cta:active {
+  transform: translate(6px, 6px);
+  box-shadow: 0px 0px 0 var(--text-color);
 }
 
 button.cta:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
+  box-shadow: none;
+  transform: none;
 }
 
 button.secondary {
@@ -331,10 +498,21 @@ button.secondary {
   font-size: 0.875rem;
   cursor: pointer;
   border-radius: 0;
+  box-shadow: 4px 4px 0 var(--text-color);
+  transition: all 0.1s ease;
+  position: relative;
+  z-index: 1;
 }
 
 button.secondary:hover {
   background: var(--input-focus-bg);
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0 var(--text-color);
+}
+
+button.secondary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0 var(--text-color);
 }
 
 /* Checkboxes */
@@ -392,10 +570,14 @@ button.secondary:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  box-shadow: 6px 6px 0 var(--text-color);
+  transition: all 0.2s ease;
 }
 
 .stat-card:hover {
   background: var(--input-focus-bg);
+  transform: translate(-2px, -2px);
+  box-shadow: 8px 8px 0 var(--text-color);
 }
 
 .stat-value {
@@ -503,11 +685,104 @@ button.secondary:hover {
 /* Footer */
 .footer {
   margin-top: auto;
-  text-align: center;
-  font-size: 0.875rem;
-  padding: var(--space-6) var(--space-4);
   border-top: var(--border-width) solid var(--text-color);
-  opacity: 0.8;
+  padding: var(--space-6) var(--space-4) var(--space-4);
+  background: var(--bg-color);
+  position: relative;
+  z-index: 10;
+}
+
+.footer-content {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.footer-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.footer-logo {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.footer-tagline {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.footer-socials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.footer-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  font-weight: 600;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.footer-links a {
+  position: relative;
+  text-decoration: none;
+}
+
+.footer-links a::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: -4px;
+  left: 0;
+  background-color: var(--text-color);
+  transform: scaleX(0);
+  transform-origin: bottom right;
+  transition: transform 0.25s ease-out;
+}
+
+.footer-links a:hover::after {
+  transform: scaleX(1);
+  transform-origin: bottom left;
+}
+
+.footer-bottom {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--text-color);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  opacity: 0.6;
+  text-transform: uppercase;
 }
 
 /* Responsive Overrides */

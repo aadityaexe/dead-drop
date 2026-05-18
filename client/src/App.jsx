@@ -75,9 +75,29 @@ function App() {
         </Routes>
       </div>
 
-      <div className="footer">
-        <div>Zero knowledge. No accounts. No logs.</div>
-      </div>
+      <footer className="footer">
+        <div className="footer-content">
+          <div className="footer-brand">
+            <span className="footer-logo">DEAD DROP</span>
+            <div className="footer-tagline">Zero knowledge. No accounts. No logs.</div>
+          </div>
+          
+          <div className="footer-socials">
+            <span className="footer-label">Connect</span>
+            <div className="footer-links">
+              <a href="https://github.com/aadityaexe" target="_blank" rel="noreferrer">GitHub</a>
+              <a href="https://x.com/aadityakumar_01" target="_blank" rel="noreferrer">X</a>
+              <a href="https://www.linkedin.com/in/aadityaexe" target="_blank" rel="noreferrer">LinkedIn</a>
+              <a href="https://www.instagram.com/adityakumar.01" target="_blank" rel="noreferrer">Instagram</a>
+            </div>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <span>&copy; {new Date().getFullYear()} Aditya Kumar</span>
+          <span className="footer-version">SYS.VER: 1.0.0</span>
+        </div>
+      </footer>
     </>
   )
 }
