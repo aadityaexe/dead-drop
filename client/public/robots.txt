@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /drop/
+
+Sitemap: https://dead-drop-two.vercel.app/sitemap.xml
