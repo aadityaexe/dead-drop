@@ -1,149 +1,282 @@
-# ☠️ Dead Drop
+# Dead Drop
 
-> A zero-knowledge protocol for sharing unrecoverable secrets. 
+Dead Drop is a zero-knowledge secret-sharing web app for sending sensitive text, such as credentials, API keys, recovery codes, and one-time notes. Payloads are encrypted in the browser before they touch the network, and the server stores only ciphertext plus the metadata needed to expire or burn the drop.
 
-Dead Drop is an ultra-secure, client-side encrypted web application designed for sharing highly sensitive information (API keys, passwords, credentials). It ensures that secrets are cryptographically annihilated the moment they are read. 
+The backend never receives a plaintext secret or a URL fragment decryption key. When a recipient opens a drop, the frontend fetches the encrypted payload, decrypts it locally, and the server either records the read or deletes the document once its view limit is reached.
 
-Your message is encrypted locally. The decryption key never leaves your device and is never sent to the server. Once the payload is fetched and decrypted, the database destroys it permanently. 
+## What It Does
 
----
+- Encrypts payloads in the browser with the native Web Crypto API.
+- Stores opaque ciphertext in MongoDB through an Express API.
+- Supports burn-after-read links and limited multi-read drops.
+- Supports optional password-based encryption using PBKDF2 and AES-GCM.
+- Expires unread drops automatically through a MongoDB TTL index.
+- Generates shareable links and QR codes for newly created drops.
+- Provides non-destructive status checks for existing drop IDs or URLs.
+- Adds client-side display deterrents such as blur-on-unfocus, shortcut blocking, and disabled context menus.
 
-## ✨ Core Features
+## Security Model
 
-- **Zero-Knowledge Architecture**: Encryption and decryption happen entirely in the browser using the native Web Crypto API (AES-GCM). The server only stores opaque ciphertexts.
-- **Burn-After-Reading**: Payloads are atomically deleted from the database upon the first successful read request.
-- **Time-to-Live (TTL)**: Secrets automatically expire and are purged via MongoDB TTL indexes if they are not read within a specified time window.
-- **Anti-Screenshot & Anti-Recording**: Aggressive client-side deterrents black out the screen if the window loses focus (preventing tools like Snipping Tool) and block standard clipboard/screenshot shortcuts.
-- **Hostile to Debugging**: Developer tools, right-clicking, and text selection are heavily restricted on the client to prevent easy data exfiltration.
-- **Brutalist UI**: A premium, responsive, two-color brutalist design system featuring a dynamic dark/light mode toggle.
-- **QR Code Generation**: Easily scan links securely to a mobile device. 
+Dead Drop is designed so the server does not have enough information to decrypt stored payloads.
 
----
+### Link-Key Flow
 
-## 🔒 Security Architecture Deep Dive
+1. The browser generates a 256-bit AES-GCM key.
+2. The payload is encrypted locally with a random IV.
+3. The frontend sends only `ciphertext`, `iv`, expiry settings, and view settings to the backend.
+4. The raw AES key is exported as Base64 and placed in the URL fragment: `/drop/:id#base64-key`.
+5. URL fragments are not sent in HTTP requests, so the backend receives only `/drop/:id`.
+6. The recipient's browser imports the fragment key and decrypts the payload locally.
 
-Dead Drop achieves a "Zero-Knowledge" state by ensuring the backend never has enough information to decrypt a payload.
+### Password Flow
 
-### The Standard Flow (No Password)
-1. **Key Generation**: The browser generates a 256-bit AES-GCM symmetric key using `window.crypto.subtle`.
-2. **Encryption**: The plaintext payload is encrypted using the key and a randomized Initialization Vector (IV).
-3. **Storage**: The `ciphertext` and `iv` are sent to the server.
-4. **URL Generation**: The raw cryptographic key is exported as a JWK (JSON Web Key) and appended to the URL as a hash fragment (e.g., `https://domain.com/drop/ID#JWK_KEY`). 
-5. **Decryption**: Hash fragments (`#`) are evaluated strictly locally by the browser and are **never** sent in HTTP requests. When the recipient opens the link, the frontend extracts the key from the URL and decrypts the payload locally.
+1. The browser derives an AES-GCM key from the password with PBKDF2.
+2. PBKDF2 uses SHA-256, 100,000 iterations, and a random salt.
+3. The payload is encrypted locally with the derived key.
+4. The frontend sends `ciphertext`, `iv`, `salt`, and `hasPassword: true` to the backend.
+5. The share URL does not include a fragment key.
+6. The recipient must enter the password to derive the same key and decrypt the payload.
 
-### The Password Flow (PBKDF2)
-If a user chooses to lock the drop with a password:
-1. A random cryptographic `salt` is generated.
-2. The user's plaintext password undergoes key derivation using **PBKDF2** (100,000 iterations, SHA-256) to generate a strong 256-bit AES-GCM key.
-3. The payload is encrypted with this derived key.
-4. The `salt`, `iv`, and `ciphertext` are sent to the server.
-5. The URL does **not** contain a hash fragment.
-6. The recipient must enter the exact password to recreate the PBKDF2 key and decrypt the payload.
+### Important Limits
 
----
+Client-side capture deterrents are not a substitute for trust. Browser restrictions can discourage casual copying, but they cannot stop a determined recipient from using another device, a modified browser, an operating-system tool, or hardware capture.
 
-## 🛠️ Tech Stack & Project Structure
+Multi-read drops are limited by the server's view counter and are intended for small trusted groups. Single-read drops use an atomic delete on the final read path.
 
-- **Frontend**: React (Vite), React Router, Vanilla CSS
-- **Backend**: Node.js, Express.js
-- **Database**: MongoDB (Mongoose)
-- **Cryptography**: Web Crypto API (AES-256-GCM, PBKDF2)
+## Tech Stack
 
-### Directory Structure
+| Area | Technology |
+| --- | --- |
+| Frontend | React, Vite, React Router |
+| Styling | CSS, Tailwind/PostCSS tooling |
+| Motion/UI | Framer Motion, QRCode |
+| Backend | Node.js, Express |
+| Database | MongoDB, Mongoose |
+| Crypto | Browser Web Crypto API |
+| Deployment | Vercel configs for client and server |
+
+## Project Structure
+
 ```text
 dead-drop/
-├── client/                 # Frontend React Application (Vite)
-│   ├── src/
-│   │   ├── components/     # React UI Components (Hero, Navbar, CreateDrop, etc.)
-│   │   ├── utils/          # Cryptography helpers (crypto.js)
-│   │   ├── App.jsx         # Main routing and security overlay logic
-│   │   └── index.css       # Brutalist design system and CSS variables
-│   └── .env                # Frontend environment variables
-├── server/                 # Backend Node.js/Express API
-│   ├── models/             # Mongoose schemas (Drop, GlobalStats)
-│   ├── index.js            # Express server and API routes
-│   ├── vercel.json         # Vercel deployment configuration
-│   └── .env                # Backend environment variables
-└── README.md
+|-- client/                 # React/Vite frontend
+|   |-- public/             # PWA, SEO, and icon assets
+|   |-- src/
+|   |   |-- components/     # Create, read, status, stats, and layout UI
+|   |   |-- utils/crypto.js # AES-GCM and PBKDF2 helpers
+|   |   |-- App.jsx         # Routes and display-protection behavior
+|   |   `-- index.css       # Global styles and design tokens
+|   |-- package.json
+|   `-- vite.config.js      # Local /api proxy configuration
+|-- server/                 # Express API
+|   |-- middleware/         # Security headers and rate limiter
+|   |-- models/Drop.js      # Drop schema and TTL index
+|   |-- routes/drops.js     # Create, read, and status endpoints
+|   |-- utils/stats.js      # In-memory telemetry counters
+|   |-- index.js            # App setup, DB connection, exports
+|   `-- package.json
+`-- README.md
 ```
 
----
-
-## 📡 API Reference
-
-The Express backend exposes the following REST endpoints:
-
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/api/drop` | `POST` | Creates a new encrypted drop. Expects `ciphertext`, `iv`, `ttlSeconds`, and optionally `hasPassword` / `salt`. |
-| `/api/drop/:id` | `GET` | Retrieves a drop and **immediately deletes it** from the database (Atomic `findOneAndDelete`). |
-| `/api/drop/:id/status` | `GET` | Checks if a drop is still alive (has not been read/expired) without deleting it. |
-| `/api/stats` | `GET` | Returns global telemetry (total drops created, total drops annihilated). |
-
-> Note: The API is protected by `express-rate-limit` to prevent brute-force creation or status-check spam.
-
----
-
-## 🚀 Local Development
+## Local Development
 
 ### Prerequisites
-- Node.js (v16+)
-- MongoDB (Local or Atlas)
 
-### 1. Clone & Install
+- Node.js 18 or newer
+- npm
+- MongoDB, either local or Atlas
+
+### Install
+
 ```bash
-git clone <repository-url>
-cd dead-drop
-
-# Install frontend dependencies
 cd client
 npm install
 
-# Install backend dependencies
 cd ../server
 npm install
 ```
 
-### 2. Environment Variables
+### Configure Environment
 
-| Variable | Location | Description |
-| :--- | :--- | :--- |
-| `PORT` | `server/.env` | Port for the Express server (default: 3001) |
-| `MONGODB_URI` | `server/.env` | Connection string for your MongoDB database |
-| `VITE_API_PROXY` | `client/.env` | Local proxy for Vite (default: `http://localhost:3001`) |
-| `VITE_API_URL` | `client/.env` | Production URL of the backend (if hosted separately) |
+Create `server/.env`:
 
-### 3. Run the App
-
-Open two terminals.
-
-**Terminal 1 (Backend):**
-```bash
-cd server
-npm start
+```env
+PORT=3001
+MONGODB_URI=mongodb://127.0.0.1:27017/dead-drop
 ```
 
-**Terminal 2 (Frontend):**
+Optional `client/.env` for local development:
+
+```env
+VITE_API_PROXY=http://localhost:3001
+```
+
+Optional `client/.env` for a separately hosted API:
+
+```env
+VITE_API_URL=https://your-api.example.com
+```
+
+When `VITE_API_URL` is empty, frontend requests use relative `/api/...` paths. During Vite development, those requests are proxied to `VITE_API_PROXY` or `http://localhost:3001`.
+
+### Run
+
+Start the API:
+
+```bash
+cd server
+npm run dev
+```
+
+Start the frontend in another terminal:
+
 ```bash
 cd client
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`.
+Open `http://localhost:5173`.
 
----
+## API Reference
 
-## 🚢 Deployment (Vercel)
+Base path: `/api`
 
-This project is configured to be deployed easily to Vercel as a single repository monorepo.
+### `POST /drop`
 
-1. Import the root repository into Vercel.
-2. The `server/vercel.json` file is already configured to route traffic to the Express backend.
-3. Ensure you set the `MONGODB_URI` environment variable in the Vercel dashboard.
-4. Set `VITE_API_URL` to your production domain if necessary for absolute routing in QR codes.
+Creates a drop.
 
-## ⚠️ Security Disclaimer
+Request body:
 
-While Dead Drop implements maximum client-side restrictions (Disabling F12, Right-Click, Print, Save, Text Selection, and utilizing Focus-Blur Blackouts) alongside standard cryptographic protocols, it is ultimately a web-based application. Client-side security deters casual copying but can theoretically be bypassed by advanced users (e.g., using hardware capture cards, virtual machines, or modifying the browser binary). 
+```json
+{
+  "ciphertext": "base64-ciphertext",
+  "iv": "base64-iv",
+  "salt": "base64-salt-or-null",
+  "hasPassword": false,
+  "maxViews": 1,
+  "expiryOption": "burn_after_read"
+}
+```
 
-Always exercise caution when sharing highly sensitive information.
+Accepted `expiryOption` values:
+
+| Value | Expiry |
+| --- | --- |
+| `burn_after_read` | 24 hours maximum, deleted sooner when read |
+| `1h` | 1 hour |
+| `24h` | 24 hours |
+| `7d` | 7 days |
+
+Accepted `maxViews` values are `1`, `3`, and `5`. Invalid values fall back to `1`.
+
+Response:
+
+```json
+{
+  "id": "drop-id",
+  "expiresAt": "2026-05-19T12:00:00.000Z"
+}
+```
+
+### `GET /drop/:id`
+
+Fetches encrypted drop data. This is destructive once the drop reaches its view limit.
+
+Response for a final read:
+
+```json
+{
+  "ciphertext": "base64-ciphertext",
+  "iv": "base64-iv",
+  "salt": null,
+  "hasPassword": false,
+  "burned": true
+}
+```
+
+Response for a multi-read drop with reads remaining:
+
+```json
+{
+  "ciphertext": "base64-ciphertext",
+  "iv": "base64-iv",
+  "salt": null,
+  "hasPassword": false,
+  "burned": false,
+  "viewsRemaining": 2
+}
+```
+
+### `GET /drop/:id/status`
+
+Checks whether a drop still exists without fetching or burning it.
+
+```json
+{
+  "alive": true,
+  "expiresAt": "2026-05-19T12:00:00.000Z"
+}
+```
+
+### `GET /stats`
+
+Returns lightweight in-memory counters.
+
+```json
+{
+  "totalDropsCreated": 42,
+  "totalBurnedToday": 7
+}
+```
+
+### `GET /health`
+
+Returns basic API health.
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-05-19T12:00:00.000Z"
+}
+```
+
+## Operational Notes
+
+- API routes are rate-limited to 100 requests per 15 minutes per IP.
+- Request bodies are limited to 1 MB.
+- MongoDB deletes expired documents through the `expiresAt` TTL index.
+- Stats are in-memory counters initialized from the current drop count on server startup. They are useful for display, not durable analytics.
+- The backend accepts both `MONGODB_URI` and `MONGO_URI`, with `MONGODB_URI` preferred.
+
+## Deployment
+
+The repository includes Vercel configuration for both app surfaces:
+
+- `client/vercel.json` for the Vite frontend.
+- `server/vercel.json` for the Express API.
+
+For production, set `MONGODB_URI` in the server environment. If the frontend and backend are deployed to different origins, set `VITE_API_URL` for the frontend build so API calls target the deployed backend.
+
+## Scripts
+
+Frontend:
+
+```bash
+cd client
+npm run dev
+npm run build
+npm run lint
+npm run preview
+```
+
+Backend:
+
+```bash
+cd server
+npm run dev
+npm start
+```
+
+## License
+
+No license file is currently included. Add one before distributing or accepting external contributions.
