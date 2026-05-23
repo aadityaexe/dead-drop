@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
 import CreateDrop from './components/CreateDrop'
@@ -17,20 +17,21 @@ function App() {
     // Prevent keyboard shortcuts
     const handleKeyDown = (e) => {
       const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      const key = e.key.toLowerCase();
 
       // F12, Inspect, View Source, Print, Save
-      if (e.keyCode === 123) e.preventDefault();
-      if (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) e.preventDefault();
-      if (e.ctrlKey && (e.keyCode === 85 || e.keyCode === 80 || e.keyCode === 83)) e.preventDefault();
+      if (e.key === 'F12') e.preventDefault();
+      if (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) e.preventDefault();
+      if (e.ctrlKey && ['u', 'p', 's'].includes(key)) e.preventDefault();
 
       // Select All, Copy (block unless typing in an input)
-      if (!isInput && e.ctrlKey && (e.keyCode === 65 || e.keyCode === 67)) {
+      if (!isInput && e.ctrlKey && ['a', 'c'].includes(key)) {
         e.preventDefault();
       }
 
       // PrintScreen (clear clipboard as a deterrent)
-      if (e.keyCode === 44) {
-        navigator.clipboard.writeText('Screenshots disabled');
+      if (e.key === 'PrintScreen' && navigator.clipboard) {
+        navigator.clipboard.writeText('Screenshots disabled').catch(() => {});
       }
     };
     document.addEventListener('keydown', handleKeyDown);
