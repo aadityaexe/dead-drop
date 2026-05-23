@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { importKey, decryptMessage, deriveKeyFromPassword } from '../utils/crypto';
 
