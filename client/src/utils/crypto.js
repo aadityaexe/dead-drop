@@ -3,6 +3,21 @@
  * 100% native browser crypto. No third-party dependencies.
  */
 
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunkSize = 0x8000;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+  }
+
+  return btoa(binary);
+}
+
+function base64ToBytes(base64) {
+  return Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+}
+
 // Generate a random AES-256-GCM key
 export async function generateKey() {
   return await window.crypto.subtle.generateKey(
@@ -15,12 +30,12 @@ export async function generateKey() {
 // Export CryptoKey to Base64 (for the URL fragment)
 export async function exportKey(key) {
   const raw = await window.crypto.subtle.exportKey("raw", key);
-  return btoa(String.fromCharCode(...new Uint8Array(raw)));
+  return bytesToBase64(new Uint8Array(raw));
 }
 
 // Import Base64 string to CryptoKey
 export async function importKey(base64Key) {
-  const raw = Uint8Array.from(atob(base64Key), c => c.charCodeAt(0));
+  const raw = base64ToBytes(base64Key);
   return await window.crypto.subtle.importKey(
     "raw", raw, { name: "AES-GCM" }, false, ["decrypt"]
   );
@@ -38,7 +53,7 @@ export async function deriveKeyFromPassword(password, saltB64) {
   );
 
   const salt = saltB64 
-    ? Uint8Array.from(atob(saltB64), c => c.charCodeAt(0))
+    ? base64ToBytes(saltB64)
     : window.crypto.getRandomValues(new Uint8Array(16));
 
   const key = await window.crypto.subtle.deriveKey(
@@ -56,7 +71,7 @@ export async function deriveKeyFromPassword(password, saltB64) {
 
   return { 
     key, 
-    saltB64: btoa(String.fromCharCode(...salt)) 
+    saltB64: bytesToBase64(salt) 
   };
 }
 
@@ -72,15 +87,15 @@ export async function encryptMessage(message, key) {
   );
   
   return {
-    ciphertext: btoa(String.fromCharCode(...new Uint8Array(ciphertextBuffer))),
-    iv: btoa(String.fromCharCode(...iv)),
+    ciphertext: bytesToBase64(new Uint8Array(ciphertextBuffer)),
+    iv: bytesToBase64(iv),
   };
 }
 
 // Decrypt a Base64 ciphertext back to string
 export async function decryptMessage(ciphertextB64, ivB64, key) {
-  const ciphertext = Uint8Array.from(atob(ciphertextB64), c => c.charCodeAt(0));
-  const iv = Uint8Array.from(atob(ivB64), c => c.charCodeAt(0));
+  const ciphertext = base64ToBytes(ciphertextB64);
+  const iv = base64ToBytes(ivB64);
   
   const decryptedBuffer = await window.crypto.subtle.decrypt(
     { name: "AES-GCM", iv },
