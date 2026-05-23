@@ -1,28 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import QRCode from 'qrcode';
 
 export default function DropResult() {
   const { state } = useLocation();
-  const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [qrSrc, setQrSrc] = useState('');
   const [status, setStatus] = useState(null); // 'waiting' | 'opened'
 
-  // Redirect if accessed directly without creating a drop
-  if (!state || !state.id) {
-    navigate('/');
-    return null;
-  }
-
-  const { id, exportedKey, expiresAt, hasPassword } = state;
+  const { id, exportedKey, expiresAt, hasPassword } = state || {};
   
   // Construct the full URL
   const clientUrl = window.location.origin;
-  const baseUrl = `${clientUrl}/drop/${id}`;
-  const fullUrl = hasPassword ? baseUrl : `${baseUrl}#${exportedKey}`;
+  const baseUrl = id ? `${clientUrl}/drop/${id}` : '';
+  const fullUrl = hasPassword ? baseUrl : `${baseUrl}#${exportedKey || ''}`;
 
   useEffect(() => {
+    if (!fullUrl) return;
+
     // Generate QR code
     QRCode.toDataURL(fullUrl, {
       width: 128,
@@ -49,8 +44,8 @@ export default function DropResult() {
       setStatus('checking...');
       const res = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/drop/${id}/status`);
       const data = await res.json();
-      setStatus(data.alive ? '● waiting (still alive)' : '✓ opened (burned)');
-    } catch (err) {
+      setStatus(data.alive ? 'Waiting (still alive)' : 'Opened or expired');
+    } catch {
       setStatus('error checking status');
     }
   };
@@ -68,6 +63,10 @@ export default function DropResult() {
     const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${h}h ${m}m`;
   };
+
+  if (!state || !state.id) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="container">
@@ -137,7 +136,7 @@ export default function DropResult() {
                 border: 'var(--border-width) dashed var(--text-color)',
                 fontFamily: 'var(--font-mono)'
               }}>
-                <div>⏱ Expires in: <strong>{getTimeLeft()}</strong></div>
+              <div>Expires in: <strong>{getTimeLeft()}</strong></div>
                 <div className="mt-3">
                   <button className="secondary" onClick={checkStatus} style={{ width: '100%' }}>
                     Trace Payload
@@ -150,11 +149,11 @@ export default function DropResult() {
         </div>
 
         <div className="warning-banner mt-4" style={{ borderColor: '#ff3333', color: '#ff3333' }}>
-          ⚠ WARNING: Once read, this payload is permanently destroyed.
+          WARNING: Once read, this payload is permanently destroyed.
         </div>
         
         <div className="mt-4" style={{ textAlign: 'center' }}>
-          <Link to="/" className="nav-link" style={{ fontSize: '0.875rem' }}>← Encrypt New Payload</Link>
+          <Link to="/" className="nav-link" style={{ fontSize: '0.875rem' }}>Encrypt New Payload</Link>
         </div>
 
       </div>
