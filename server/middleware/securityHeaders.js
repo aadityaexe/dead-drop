@@ -1,23 +1,62 @@
-function securityHeaders(req, res, next) {
-  // Enforce HTTPS for 2 years
-  res.setHeader('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+const helmet = require('helmet');
 
-  // Restrict resource loading to same origin
-  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'");
+/**
+ * Security headers middleware powered by helmet.
+ * 
+ * Helmet sets 15+ HTTP response headers including:
+ *   - Strict-Transport-Security (HSTS)
+ *   - Content-Security-Policy (CSP)
+ *   - X-Frame-Options
+ *   - X-Content-Type-Options
+ *   - Referrer-Policy
+ *   - Cross-Origin-Opener-Policy
+ *   - Cross-Origin-Resource-Policy
+ *   - Origin-Agent-Cluster
+ *   - X-DNS-Prefetch-Control
+ *   - X-Download-Options
+ *   - X-Permitted-Cross-Domain-Policies
+ *   - Permissions-Policy
+ */
+const securityHeaders = helmet({
+  // Enforce HTTPS for 2 years
+  strictTransportSecurity: {
+    maxAge: 63072000,
+    includeSubDomains: true,
+    preload: true,
+  },
+
+  // Strict Content Security Policy
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],                          // No unsafe-inline
+      styleSrc: ["'self'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+      upgradeInsecureRequests: [],
+    },
+  },
 
   // Prevent clickjacking
-  res.setHeader('X-Frame-Options', 'DENY');
+  frameguard: { action: 'deny' },
 
   // Prevent MIME-type sniffing
-  res.setHeader('X-Content-Type-Options', 'nosniff');
+  noSniff: true,
 
   // Disable referrer for privacy
-  res.setHeader('Referrer-Policy', 'no-referrer');
+  referrerPolicy: { policy: 'no-referrer' },
 
   // Restrict browser features
-  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  permittedCrossDomainPolicies: { permittedPolicies: 'none' },
 
-  next();
-}
+  // Isolate browsing context for side-channel attack protection
+  crossOriginOpenerPolicy: { policy: 'same-origin' },
+  crossOriginResourcePolicy: { policy: 'same-origin' },
+});
 
 module.exports = securityHeaders;
