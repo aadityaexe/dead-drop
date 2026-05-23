@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 export default function StatusCheck() {
   const [id, setId] = useState('');
@@ -24,7 +24,7 @@ export default function StatusCheck() {
       
       const data = await res.json();
       setStatus(data);
-    } catch (err) {
+    } catch {
       setError('Could not verify status. Make sure the ID is correct.');
       setStatus(null);
     }
