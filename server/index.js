@@ -2,15 +2,17 @@ require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const path = require('path');
 
 const securityHeaders = require('./middleware/securityHeaders');
-const rateLimiter = require('./middleware/rateLimiter');
+const { apiLimiter } = require('./middleware/rateLimiter');
 const dropRoutes = require('./routes/drops');
 const { getStats, initStats } = require('./utils/stats');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 // ─── Database Connection ────────────────────────────────────
 let cachedConnection = null;
@@ -50,19 +52,21 @@ const connectDB = async () => {
 // Trust the Vercel proxy for express-rate-limit
 app.set('trust proxy', 1);
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
+// CORS — strict origin whitelist (replaces manual headers)
+app.use(cors({
+  origin: CLIENT_ORIGIN === '*' ? '*' : CLIENT_ORIGIN.split(',').map(s => s.trim()),
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
+  maxAge: 86400, // Cache preflight for 24 hours
+}));
 
 app.use(express.json({ limit: '1mb' }));
+
+// Security headers (powered by helmet)
 app.use(securityHeaders);
 
 // Rate limit all API routes
-app.use('/api', rateLimiter);
+app.use('/api', apiLimiter);
 
 // Ensure MongoDB is ready before routes touch Mongoose models.
 app.use('/api/drop', async (req, res, next) => {
