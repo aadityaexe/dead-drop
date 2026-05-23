@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function Hero() {
   const scrollDown = () => {
     window.scrollBy({ top: window.innerHeight * 0.5, behavior: 'smooth' });
