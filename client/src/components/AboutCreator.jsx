@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function AboutCreator() {
   return (
     <section id="about" className="about-section">
