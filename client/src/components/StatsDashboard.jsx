@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function StatsDashboard() {
   const [stats, setStats] = useState(null);
@@ -11,7 +11,7 @@ export default function StatsDashboard() {
         if (!res.ok) throw new Error('Failed to fetch');
         const data = await res.json();
         setStats(data);
-      } catch (err) {
+      } catch {
         setError(true);
       }
     }
