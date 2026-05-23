@@ -1,34 +1,73 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Drop = require('../models/Drop');
-const { incrementCreated, incrementBurned } = require('../utils/stats');
+const Drop = require("../models/Drop");
+const { incrementCreated, incrementBurned } = require("../utils/stats");
+const { readLimiter } = require("../middleware/rateLimiter");
 
-// Expiry option → milliseconds mapping
+// ─── Constants ─────────────────────────────────────────────
 const EXPIRY_MAP = {
-  'burn_after_read': 24 * 60 * 60 * 1000,   // 24h max TTL even for burn-after-read
-  '1h':  1 * 60 * 60 * 1000,
-  '24h': 24 * 60 * 60 * 1000,
-  '7d':  7 * 24 * 60 * 60 * 1000,
+  burn_after_read: 24 * 60 * 60 * 1000, // 24h max TTL even for burn-after-read
+  "1h": 1 * 60 * 60 * 1000,
+  "24h": 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
 };
+const ALLOWED_MAX_VIEWS = new Set([1, 3, 5]);
+const MAX_CIPHERTEXT_LENGTH = 500_000; // 500 KB max ciphertext
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// POST /api/drop — Create a new drop
-router.post('/', async (req, res) => {
+// ─── Helpers ───────────────────────────────────────────────
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isValidUUID(id) {
+  return typeof id === "string" && UUID_REGEX.test(id);
+}
+
+/**
+ * Middleware: Validate :id param is a valid UUID.
+ * Prevents NoSQL injection and malformed query attacks.
+ */
+function validateId(req, res, next) {
+  if (!isValidUUID(req.params.id)) {
+    return res.status(400).json({ error: "Invalid drop identifier." });
+  }
+  next();
+}
+
+// ─── POST /api/drop — Create a new drop ────────────────────
+router.post("/", async (req, res) => {
   try {
-    const { ciphertext, iv, salt, hasPassword, maxViews, expiryOption } = req.body;
+    const { ciphertext, iv, salt, hasPassword, maxViews, expiryOption } =
+      req.body;
 
-    if (!ciphertext || !iv) {
-      return res.status(400).json({ error: 'ciphertext and iv are required.' });
+    // Validate required fields
+    if (!isNonEmptyString(ciphertext) || !isNonEmptyString(iv)) {
+      return res.status(400).json({ error: "ciphertext and iv are required." });
     }
 
-    const expiryMs = EXPIRY_MAP[expiryOption] || EXPIRY_MAP['24h'];
+    // Validate ciphertext length to prevent abuse
+    if (ciphertext.length > MAX_CIPHERTEXT_LENGTH) {
+      return res.status(413).json({ error: "Payload too large." });
+    }
+
+    // Validate IV length (AES-GCM uses 12-byte IV = 16 chars base64)
+    if (iv.length > 24) {
+      return res.status(400).json({ error: "Invalid IV." });
+    }
+
+    const expiryMs = EXPIRY_MAP[expiryOption] || EXPIRY_MAP["24h"];
     const expiresAt = new Date(Date.now() + expiryMs);
+    const safeMaxViews = ALLOWED_MAX_VIEWS.has(Number(maxViews))
+      ? Number(maxViews)
+      : 1;
 
     const drop = new Drop({
-      ciphertext,
-      iv,
-      salt: salt || null,
+      ciphertext: ciphertext.trim(),
+      iv: iv.trim(),
+      salt: isNonEmptyString(salt) ? salt.trim() : null,
       hasPassword: !!hasPassword,
-      maxViews: [1, 3, 5].includes(maxViews) ? maxViews : 1,
+      maxViews: safeMaxViews,
       expiresAt,
     });
 
@@ -40,37 +79,41 @@ router.post('/', async (req, res) => {
       expiresAt: drop.expiresAt.toISOString(),
     });
   } catch (err) {
-    console.error('Create drop error:', err.message);
-    res.status(500).json({ error: 'Failed to create drop.' });
+    console.error("Create drop error:", err.message);
+    res.status(500).json({ error: "Server error." });
   }
 });
 
-// GET /api/drop/:id — Read and atomically delete (burn-on-read)
-router.get('/:id', async (req, res) => {
+// ─── GET /api/drop/:id — Read and atomically burn ──────────
+router.get("/:id", validateId, readLimiter, async (req, res) => {
   try {
     const { id } = req.params;
 
-    // For single-view drops, use findOneAndDelete for atomic burn
-    // For multi-view drops, increment viewCount and burn when limit reached
-    const drop = await Drop.findById(id);
+    const activeQuery = {
+      _id: id,
+      burned: false,
+      expiresAt: { $gt: new Date() },
+    };
 
-    if (!drop || drop.burned) {
-      return res.status(404).json({ error: 'This drop no longer exists.' });
-    }
+    // Try non-final read: increment viewCount if not at the last view
+    const drop = await Drop.findOneAndUpdate(
+      {
+        ...activeQuery,
+        $expr: { $lt: ["$viewCount", { $subtract: ["$maxViews", 1] }] },
+      },
+      { $inc: { viewCount: 1 } },
+      { new: true },
+    );
 
-    // Increment view count
-    drop.viewCount += 1;
-
-    // Check if this is the last allowed view
-    if (drop.viewCount >= drop.maxViews) {
-      // Atomic delete — no race condition
+    if (!drop) {
+      // Try final read: atomically delete the document
       const deleted = await Drop.findOneAndDelete({
-        _id: id,
-        burned: false,
+        ...activeQuery,
+        $expr: { $lt: ["$viewCount", "$maxViews"] },
       });
 
       if (!deleted) {
-        return res.status(404).json({ error: 'This drop no longer exists.' });
+        return res.status(404).json({ error: "This drop no longer exists." });
       }
 
       incrementBurned();
@@ -84,9 +127,6 @@ router.get('/:id', async (req, res) => {
       });
     }
 
-    // Multi-view: save updated count
-    await drop.save();
-
     res.json({
       ciphertext: drop.ciphertext,
       iv: drop.iv,
@@ -96,17 +136,24 @@ router.get('/:id', async (req, res) => {
       viewsRemaining: drop.maxViews - drop.viewCount,
     });
   } catch (err) {
-    console.error('Read drop error:', err.message);
-    res.status(500).json({ error: 'Failed to read drop.' });
+    console.error("Read drop error:", err.message);
+    res.status(500).json({ error: "Server error." });
   }
 });
 
-// GET /api/drop/:id/status — Check if drop is still alive (non-destructive)
-router.get('/:id/status', async (req, res) => {
+// ─── GET /api/drop/:id/status — Non-destructive check ──────
+router.get("/:id/status", validateId, async (req, res) => {
   try {
-    const drop = await Drop.findById(req.params.id, 'expiresAt burned');
+    const drop = await Drop.findOne(
+      {
+        _id: req.params.id,
+        burned: false,
+        expiresAt: { $gt: new Date() },
+      },
+      "expiresAt",
+    );
 
-    if (!drop || drop.burned) {
+    if (!drop) {
       return res.json({ alive: false });
     }
 
@@ -115,8 +162,8 @@ router.get('/:id/status', async (req, res) => {
       expiresAt: drop.expiresAt.toISOString(),
     });
   } catch (err) {
-    console.error('Status check error:', err.message);
-    res.status(500).json({ error: 'Failed to check status.' });
+    console.error("Status check error:", err.message);
+    res.status(500).json({ error: "Server error." });
   }
 });
 
