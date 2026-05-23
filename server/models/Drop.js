@@ -25,6 +25,7 @@ const dropSchema = new mongoose.Schema({
   maxViews: {
     type: Number,
     default: 1,
+    enum: [1, 3, 5],
   },
   viewCount: {
     type: Number,
